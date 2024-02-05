@@ -1,4 +1,4 @@
-function W = trainGCCAdecoders(X,Q,covMethod)
+function W = trainGCCAdecoders(X,Q,regularization)
 % TRAINGCCADECODERS Solve the MAXVAR-GCCA problem to train GCCA decoders
 % based on K EEG signals of subjects attending the same stimulus.
 %
@@ -6,8 +6,11 @@ function W = trainGCCAdecoders(X,Q,covMethod)
 %       X [DOUBLE]: EEG tensor (time x channel/lag x subject)
 %       Q [INTEGER]: subspace dimension/number of components to
 %                               extract
-%       covMethod [STRING]: 'cov' (classical sample covariance) or 'lwcov'
-%                           (ledoit-wolf estimation)
+%       regularization [STRUCT]: fields
+%           'method': 'none' (classical sample covariance), 'lwcov'
+%                           (ledoit-wolf estimation), or 'l2' (diagonal
+%                           loading)
+%           'mu': hyperparameter in case of 'l2'
 %
 %   Output:
 %       W [DOUBLE]: EEG decoders (channel/lag x subject x component)
@@ -19,8 +22,8 @@ function W = trainGCCAdecoders(X,Q,covMethod)
 [~,M,K] = size(X);
 
 Xfl = tens2mat(X,1,2:3);
-switch covMethod
-    case 'none'
+switch regularization.method
+    case {'none','l2'}
         Rxx = cov(Xfl);
     case 'lwcov'
         Rxx = lwcov(Xfl);
@@ -31,12 +34,19 @@ for k = 1:K
     Rdxx((k-1)*M+1:k*M,(k-1)*M+1:k*M) = Rxx((k-1)*M+1:k*M,(k-1)*M+1:k*M);
 end
 
+if strcmp(regularization.method,'l2')
+    for k = 1:K
+        Rdxx((k-1)*M+1:k*M,(k-1)*M+1:k*M) = Rdxx((k-1)*M+1:k*M,(k-1)*M+1:k*M) + regularization.mu*trace(Rdxx((k-1)*M+1:k*M,(k-1)*M+1:k*M))./M*eye(M);
+    end
+end
+
 %% Compute GEVD with reduced number of components for speedup
+Rdxx = (Rdxx+Rdxx')/2; Rxx = (Rxx+Rxx')/2; % ensure symmetry
 [W,Lambda] = eigs(Rdxx,Rxx,Q,'smallestabs');
 
 %% Correct scaling
 W = W./vecnorm(W);
-W = W*sqrtm(inv(W'*Rdxx*W*Lambda));
+W = sqrt(1./(diag(Lambda).^2.*diag((Xfl*W)'*Xfl*W)))'.*W;
 
 %% Extract filters
 W = reshape(W,[M,K,Q]);

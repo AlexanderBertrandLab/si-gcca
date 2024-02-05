@@ -1,4 +1,4 @@
-%% TEST VARIOUS AMOUNTS OF TRAINING DATA FOR MAXVAR-GCCA
+%% TEST VARIOUS AMOUNTS OF TRAINING DATA
 
 % Author: Simon Geirnaert, KU Leuven, ESAT & Dept. of Neurosciences
 % Correspondence: simon.geirnaert@esat.kuleuven.be

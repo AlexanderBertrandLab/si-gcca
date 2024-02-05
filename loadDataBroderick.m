@@ -29,9 +29,11 @@ for run = 1:20
     eegTemp = eegTemp-mean(double(data.mastoids),2);
 
     %% filtering
-    d = designfilt('bandpassiir','FilterOrder',4, ...
-        'HalfPowerFrequency1',preprocessing.filtering.low,'HalfPowerFrequency2',preprocessing.filtering.high, ...
-        'SampleRate',fs);
+    if run == 1
+        d = designfilt('bandpassiir','FilterOrder',4, ...
+            'HalfPowerFrequency1',preprocessing.filtering.low,'HalfPowerFrequency2',preprocessing.filtering.high, ...
+            'SampleRate',fs);
+    end
     eegTemp = filtfilt(d,eegTemp);
     envelopeTemp = filtfilt(d,envelopeTemp);
 
