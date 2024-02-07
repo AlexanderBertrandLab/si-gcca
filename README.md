@@ -1,4 +1,4 @@
-# Stimulus-Informed Generalized Canonical Correlation Analysis of Stimulus-Following Brain Responses
+# Stimulus-Informed Generalized Canonical Correlation Analysis for Group Analysis of Stimulus-Following Neural Responses
 
 ## License
 
@@ -8,7 +8,7 @@ If this code has been useful for you, please cite [1].
 
 ## About
 
-This repository includes the MATLAB-code for the (SI-)GCCA algorithms (and corrCA variants) as explained in [1] as well as all the experiments from the paper in [1], conducted on the publicly available dataset of [2]. The experimental files for the video dataset [3] are not available, due to copyright constraints on the video stimuli (see [3]). However, the analysis code is very similar to the group size experiment on the speech data (which is available), such that it is fairly easy to reproduce the results on the video data once the video features are generated.
+This repository includes the MATLAB-code for the (SI-)GCCA algorithms (and corrCA variants) as explained in [1] (in the toolbox) as well as all the experiments from the paper in [1], conducted on the publicly available dataset of [2]. The experimental files for the video dataset [3] are not available, due to copyright constraints on the video stimuli (see [3]). However, the analysis code is very similar to the group size experiment on the speech data (which is available), such that it is fairly easy to reproduce the results on the video data once the video features are generated.
 
 Developed and tested in MATLAB R2021b.
 
