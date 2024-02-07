@@ -79,4 +79,4 @@ The Software constitutes any software distributed as part of or pertaining to th
 
 #### A.2 References:
 
-[1] S. Geirnaert, Y. Yao, T. Francart and A. Bertrand, "Stimulus-Informed Generalized Canonical Correlation Analysis for Group Analysis of Neural Responses," arXiv, 2024, [https://doi.org/10.48550/arXiv.2210.13297](https://doi.org/10.48550/arXiv.2401.17841)https://doi.org/10.48550/arXiv.2401.17841.
+[1] S. Geirnaert, Y. Yao, T. Francart and A. Bertrand, "Stimulus-Informed Generalized Canonical Correlation Analysis for Group Analysis of Neural Responses," arXiv, 2024, [https://doi.org/10.48550/arXiv.2210.13297](https://doi.org/10.48550/arXiv.2401.17841).
