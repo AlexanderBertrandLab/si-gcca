@@ -1,4 +1,4 @@
-%% TEST A SPECIFIC AMOUNT OF TRAINING DATA ON SPEECH DATA
+%% TEST A SPECIFIC GROUP SIZE ON SPEECH DATA
 
 % Author: Simon Geirnaert, KU Leuven, ESAT & Dept. of Neurosciences
 % Correspondence: simon.geirnaert@esat.kuleuven.be
@@ -6,9 +6,10 @@
 clear; close all; clc;
 
 %% Setup: parameters
-params.amountOfTrainingData = 30; % amount of training data for GEVD computation
+params.groupSize = 6; % group size to test
 
 params.methods = {'corrCA','corrCA-l2','SI-corrCA','GCCA','GCCA-l2','SI-GCCA'}; % options: 'GCCA', 'SI-GCCA', 'corrCA', 'SI-corrCA', 'GCCA-l2', 'corrCA-l2'
+params.amountOfTrainingData = 40; % amount of training data to use
 
 params.datapath = 'C:\Users\sgeirnae\Documents\data\broderick'; % path where your data is
 params.windowLength = 60; % decision window length to test (in seconds)
@@ -39,10 +40,12 @@ params.bwDecoder.regularization.method = 'lwcov';
 params.saving.save = false; params.saving.naming = 'test'; % saving parameters
 
 %% Initialization
-pairCoding = nchoosek(1:length(params.subjects),2); % to index corrs and indicate the pairing of subjects
+trainSize = params.amountOfTrainingData;
+pairCoding = nchoosek(1:params.groupSize,2); % to index corrs and indicate the pairing of subjects
 
 %% Load all data and construct data matrices
 fprintf('Loading all data\n');
+
 for s = 1:length(params.subjects)
     fprintf('   Subject %i/%i\n',s,length(params.subjects))
 
@@ -56,10 +59,10 @@ for s = 1:length(params.subjects)
     % initialize eeg variable
     if s == 1
         eeg = zeros(size(eegS,1),size(eegS,2),size(eegS,3),length(params.subjects));
-        validationSize = max(0,round(params.decoder.validationSize*(size(eeg,3)-params.amountOfTrainingData)));
-        testSize = size(eeg,3)-params.amountOfTrainingData-validationSize;
-        pairwiseCorrs = zeros(size(pairCoding,1),testSize,params.nbReps,params.decoder.nbComponents,length(params.methods)); % pair x window x repetition x component x method
-        bwCorr = zeros(testSize,params.decoder.nbComponents,length(params.subjects)+1,2,params.nbReps,length(params.methods)); % window x component x subject + avg subspace x repetitions x method
+        validationSize = max(0,round(params.decoder.validationSize*(size(eeg,3)-trainSize)));
+        testSize = size(eeg,3)-trainSize-validationSize;
+        pairwiseCorrs = zeros(size(pairCoding,1),testSize,params.nbReps,params.decoder.nbComponents,length(params.methods));
+        bwCorr = zeros(testSize,params.decoder.nbComponents,params.groupSize+1,2,params.nbReps,length(params.methods)); % trial x component x all subjects + hidden subspace x individual components + cumulative x repetitions x methods
     end
     eeg(:,:,:,s) = eegS;
 end
@@ -76,22 +79,28 @@ fprintf('Training and testing...\n');
 nbTrials = size(eeg,3);
 nbMethods = length(params.methods);
 
+% determine random combinations of subjects in a group and init
+combos = nchoosek(1:length(params.subjects),params.groupSize);
+selInd = randi(size(combos,1),params.nbReps,1);
+combos = combos(selInd,:);
+subjectCombos = combos;
+
 %% Loop over repetitions
 for rep = 1:params.nbReps
     fprintf('%.2f%% completed\n',(rep-1)/params.nbReps*100);
 
     % determine training and test data
-    ri = randperm(nbTrials,params.amountOfTrainingData+validationSize); % randomly pick training and validation segments
+    ri = randperm(nbTrials,trainSize+validationSize); % randomly pick training and validation segments
     idxTrain = false(nbTrials,1);
-    idxTrain(ri(1:params.amountOfTrainingData)) = 1;
+    idxTrain(ri(1:trainSize)) = 1;
     idxValidation = false(nbTrials,1);
-    idxValidation(ri(params.amountOfTrainingData+1:end)) = 1;
+    idxValidation(ri(trainSize+1:end)) = 1;
     idxTest = logical(1-idxTrain-idxValidation);
 
     X = struct;
-    X.test = eeg(:,:,idxTest,:);
-    X.val = eeg(:,:,idxValidation,:);
-    X.train = eeg(:,:,idxTrain,:);
+    X.test = eeg(:,:,idxTest,combos(rep,:));
+    X.val = eeg(:,:,idxValidation,combos(rep,:));
+    X.train = eeg(:,:,idxTrain,combos(rep,:));
 
     env = struct;
     env.test = envelope(:,:,idxTest);
@@ -119,18 +128,18 @@ for rep = 1:params.nbReps
                     case 'SI-corrCA'
                         reg = struct; reg.method = 'lwcov';
                         [W,~] = trainSIcorrCAdecoders(reshape(permute(X.train,[1,3,2,4]),[size(X.train,1)*size(X.train,3),size(X.train,2),size(X.train,4)]),reshape(permute(env.train,[1,3,2]),[size(env.train,1)*size(env.train,3),size(env.train,2)]),params.decoder.nbComponents,hyperparams(hypCnt),reg);
-                        W = permute(repmat(W,[1,1,length(params.subjects)]),[1,3,2]);
+                        W = permute(repmat(W,[1,1,params.groupSize]),[1,3,2]);
                     case 'GCCA-l2'
                         reg = struct; reg.method = 'l2'; reg.mu = hyperparams(hypCnt);
                         W = trainGCCAdecoders(reshape(permute(X.train,[1,3,2,4]),[size(X.train,1)*size(X.train,3),size(X.train,2),size(X.train,4)]),params.decoder.nbComponents,reg);
                     case 'corrCA-l2'
                         reg = struct; reg.method = 'l2'; reg.mu = hyperparams(hypCnt);
                         W = trainCorrCAdecoders(reshape(permute(X.train,[1,3,2,4]),[size(X.train,1)*size(X.train,3),size(X.train,2),size(X.train,4)]),params.decoder.nbComponents,reg);
-                        W = permute(repmat(W,[1,1,length(params.subjects)]),[1,3,2]);
+                        W = permute(repmat(W,[1,1,params.groupSize]),[1,3,2]);
                 end
 
                 % output validation signals
-                for s = 1:length(params.subjects)
+                for s = 1:params.groupSize
                     yVal(:,:,s,:) = permute(squeeze(tmprod(X.val(:,:,:,s),squeeze(W(:,s,:))',2)),[1,3,2]);
                 end
 
@@ -176,7 +185,7 @@ for rep = 1:params.nbReps
         %% apply decoders
         yTrain = zeros(size(X.train,1),size(X.train,3),size(X.train,4),params.decoder.nbComponents);
         yTest = zeros(size(X.test,1),size(X.test,3),size(X.test,4),params.decoder.nbComponents);
-        for s = 1:length(params.subjects)
+        for s = 1:params.groupSize
             if contains(method,'corrCA')
                 yTrain(:,:,s,:) = permute(squeeze(tmprod(X.train(:,:,:,s),W',2)),[1,3,2]);
                 yTest(:,:,s,:) = permute(squeeze(tmprod(X.test(:,:,:,s),W',2)),[1,3,2]);
@@ -190,8 +199,8 @@ for rep = 1:params.nbReps
         envTrain = env.train(:,1,:); envTrain = envTrain(:);
 
         % individual decoding
-        yBw = zeros(size(yTest,1),size(yTest,2),params.decoder.nbComponents,length(params.subjects)+1,2); % 4th dimension: every subject + hidden subspace, last dimension: individual components + incremental subspace
-        for s = 1:length(params.subjects)
+        yBw = zeros(size(yTest,1),size(yTest,2),params.decoder.nbComponents,params.groupSize+1,2); % 4th dimension: every subject + hidden subspace, last dimension: individual components + incremental subspace
+        for s = 1:params.groupSize
             % time-delay embedding
             yTrainEmbed = timeDelayEmbedding(permute(yTrain(:,:,s,:),[1,4,2,3]),params.bwDecoder.L,fs);
             yTrainEmbed = reshape(permute(yTrainEmbed,[1,3,2]),[size(yTrainEmbed,1)*size(yTrainEmbed,3),size(yTrainEmbed,2)]);
@@ -216,9 +225,9 @@ for rep = 1:params.nbReps
 
         for c = 1:params.decoder.nbComponents
             d = trainStimulusDecoder(sTrainEmbed(:,(c-1)*nbLagsBw+1:nbLagsBw*c),envTrain,params.bwDecoder.regularization);
-            yBw(:,:,c,length(params.subjects)+1,1) = squeeze(tmprod(sTestEmbed(:,(c-1)*nbLagsBw+1:nbLagsBw*c,:),d',2));
+            yBw(:,:,c,params.groupSize+1,1) = squeeze(tmprod(sTestEmbed(:,(c-1)*nbLagsBw+1:nbLagsBw*c,:),d',2));
             d = trainStimulusDecoder(sTrainEmbed(:,1:nbLagsBw*c),envTrain,params.bwDecoder.regularization);
-            yBw(:,:,c,length(params.subjects)+1,2) = squeeze(tmprod(sTestEmbed(:,1:nbLagsBw*c,:),d',2));
+            yBw(:,:,c,params.groupSize+1,2) = squeeze(tmprod(sTestEmbed(:,1:nbLagsBw*c,:),d',2));
         end
 
         %% cut in windows and compute ISC
@@ -233,7 +242,7 @@ for rep = 1:params.nbReps
         envTest = reshape(envTest,[size(envTest,1),size(envTest,2)*size(envTest,3)]);
 
         % compute stimulus correlations
-        for s = 1:length(params.subjects)+1
+        for s = 1:params.groupSize+1
             for c = 1:params.decoder.nbComponents
                 for setting = 1:2
                     bwCorr(:,c,s,setting,rep,meI) = diag(corr(yBw(:,:,c,s,setting),envTest,'Type','Pearson'));

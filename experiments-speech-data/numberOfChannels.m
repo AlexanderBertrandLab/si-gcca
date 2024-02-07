@@ -1,4 +1,4 @@
-%% TEST A SPECIFIC AMOUNT OF TRAINING DATA ON SPEECH DATA
+%% TEST A SPECIFIC NUMBER OF CHANNELS ON SPEECH DATA
 
 % Author: Simon Geirnaert, KU Leuven, ESAT & Dept. of Neurosciences
 % Correspondence: simon.geirnaert@esat.kuleuven.be
@@ -6,8 +6,9 @@
 clear; close all; clc;
 
 %% Setup: parameters
-params.amountOfTrainingData = 30; % amount of training data for GEVD computation
+params.nbChannels = 32; % number of random EEG channels to use
 
+params.amountOfTrainingData = 40; % amount of training data for GEVD computation
 params.methods = {'corrCA','corrCA-l2','SI-corrCA','GCCA','GCCA-l2','SI-GCCA'}; % options: 'GCCA', 'SI-GCCA', 'corrCA', 'SI-corrCA', 'GCCA-l2', 'corrCA-l2'
 
 params.datapath = 'C:\Users\sgeirnae\Documents\data\broderick'; % path where your data is
@@ -16,8 +17,8 @@ params.nbReps = 50; % amount of repetitions of sampling the data
 params.subjects = 1:19; % subjects to include in experiments
 
 % preprocessing
-% params.preprocessing.eegChanSel = [];
-params.preprocessing.eegChanSel = [1,3,5,7,10,15,17,19,21,23,25,28,30,32,34,36,39,42,43,45,46,48,50,52,54,56,57,59,61,63,68,69,71,72,75,76,79,80,81,83,85,87,88,89,92,93,94,100,101,103,104,106,108,110,112,115,117,119,120,122,124,125,127,128]; % 64-channel
+params.preprocessing.eegChanSel = [];
+% params.preprocessing.eegChanSel = [1,3,5,7,10,15,17,19,21,23,25,28,30,32,34,36,39,42,43,45,46,48,50,52,54,56,57,59,61,63,68,69,71,72,75,76,79,80,81,83,85,87,88,89,92,93,94,100,101,103,104,106,108,110,112,115,117,119,120,122,124,125,127,128]; % 64-channel
 % params.preprocessing.eegChanSel = [1,3,7,15,19,21,28,36,43,54,58,59,68,71,80,83,85,93,100,103,115,119,127]; % smarting mbraintrain for biosemi 128-channel
 params.preprocessing.normalization = true; % 1: with normalization of regression matrices (column-wise), 0: without normalization
 params.preprocessing.filtering.low = 1; % lower band for filtering
@@ -39,6 +40,7 @@ params.bwDecoder.regularization.method = 'lwcov';
 params.saving.save = false; params.saving.naming = 'test'; % saving parameters
 
 %% Initialization
+trainSize = params.amountOfTrainingData;
 pairCoding = nchoosek(1:length(params.subjects),2); % to index corrs and indicate the pairing of subjects
 
 %% Load all data and construct data matrices
@@ -51,15 +53,17 @@ for s = 1:length(params.subjects)
     [eegS,~,fs,~] = loadDataBroderick(sb,params.preprocessing,params.windowLength,params.datapath);
 
     % time-delay embedding
+    nbChannels = size(eegS,2);
     eegS = timeDelayEmbedding(eegS,params.decoder.Leeg,fs);
+    nbLags = size(eegS,2)/nbChannels;
 
     % initialize eeg variable
     if s == 1
         eeg = zeros(size(eegS,1),size(eegS,2),size(eegS,3),length(params.subjects));
         validationSize = max(0,round(params.decoder.validationSize*(size(eeg,3)-params.amountOfTrainingData)));
         testSize = size(eeg,3)-params.amountOfTrainingData-validationSize;
-        pairwiseCorrs = zeros(size(pairCoding,1),testSize,params.nbReps,params.decoder.nbComponents,length(params.methods)); % pair x window x repetition x component x method
-        bwCorr = zeros(testSize,params.decoder.nbComponents,length(params.subjects)+1,2,params.nbReps,length(params.methods)); % window x component x subject + avg subspace x repetitions x method
+        pairwiseCorrs = zeros(size(pairCoding,1),testSize,params.nbReps,params.decoder.nbComponents,length(params.methods));
+        bwCorr = zeros(testSize,params.decoder.nbComponents,length(params.subjects)+1,2,params.nbReps,length(params.methods)); % trial x component x all subjects + hidden subspace x individual components + cumulative x repetitions x methods
     end
     eeg(:,:,:,s) = eegS;
 end
@@ -71,32 +75,51 @@ clear eegS;
 % time-delay embedding envelope
 envelope = timeDelayEmbedding(reshape(envelope,[size(envelope,1),1,size(envelope,2)]),params.decoder.Laudio,fs);
 
+% warning
+if params.nbChannels*nbLags < params.decoder.nbComponents
+    params.decoder.nbComponents = params.nbChannels*nbLags;
+    warning('Needed to limit the number of components')
+end
+
 %% Training and testing
 fprintf('Training and testing...\n');
 nbTrials = size(eeg,3);
 nbMethods = length(params.methods);
 
+% determine random combinations of channels
+combos = zeros(params.nbReps,params.nbChannels);
+for rep = 1:params.nbReps
+    combos(rep,:) = randperm(nbChannels,params.nbChannels);
+end
+channelCombos = combos;
+
 %% Loop over repetitions
 for rep = 1:params.nbReps
     fprintf('%.2f%% completed\n',(rep-1)/params.nbReps*100);
 
+    % convert channel indices to channel-lag indices
+    indSel = zeros(params.nbChannels*nbLags,1);
+    for ch = 1:params.nbChannels
+        indSel((ch-1)*nbLags+1:ch*nbLags) = ((combos(rep,ch)-1)*nbLags+1:combos(rep,ch)*nbLags);
+    end
+
     % determine training and test data
-    ri = randperm(nbTrials,params.amountOfTrainingData+validationSize); % randomly pick training and validation segments
+    ri = randperm(nbTrials,trainSize+validationSize); % randomly pick training and validation segments
     idxTrain = false(nbTrials,1);
-    idxTrain(ri(1:params.amountOfTrainingData)) = 1;
+    idxTrain(ri(1:trainSize)) = 1;
     idxValidation = false(nbTrials,1);
-    idxValidation(ri(params.amountOfTrainingData+1:end)) = 1;
+    idxValidation(ri(trainSize+1:end)) = 1;
     idxTest = logical(1-idxTrain-idxValidation);
 
     X = struct;
-    X.test = eeg(:,:,idxTest,:);
-    X.val = eeg(:,:,idxValidation,:);
-    X.train = eeg(:,:,idxTrain,:);
+    X.test = eeg(:,indSel,idxTest,:);
+    X.train = eeg(:,indSel,idxTrain,:);
+    X.val = eeg(:,indSel,idxValidation,:);
 
     env = struct;
     env.test = envelope(:,:,idxTest);
-    env.val = envelope(:,:,idxValidation);
     env.train = envelope(:,:,idxTrain);
+    env.val = envelope(:,:,idxValidation);
 
     %% train group decoders
     for meI = 1:nbMethods
