@@ -1,0 +1,69 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: SI-GCCA Toolbox and Experiments
+message: >-
+  If you use this software, please cite it and the
+  corresponding paper: S. Geirnaert, Y. Yao, T. Francart and
+  A. Bertrand, "Stimulus-Informed Generalized Canonical
+  Correlation Analysis for Group Analysis of Neural
+  Responses to Natural Stimuli," arXiv, 2024,
+  https://doi.org/10.48550/arXiv.2401.17841.
+type: software
+authors:
+  - given-names: Simon
+    family-names: Geirnaert
+    email: simon.geirnaert@esat.kuleuven.be
+    affiliation: KU Leuven
+    orcid: 'https://orcid.org/0000-0002-4120-4232'
+  - given-names: Yuanyuan
+    family-names: Yao
+    email: yuanyuan.yao@esat.kuleuven.be
+    affiliation: KU Leuven
+  - given-names: Tom
+    family-names: Francart
+    email: tom.francart@kuleuven.be
+    affiliation: KU Leuven
+  - given-names: Alexander
+    family-names: Bertrand
+    email: alexander.bertrand@esat.kuleuven.be
+    affiliation: Ku Leuven
+identifiers:
+  - type: doi
+    value: 10.48550/arXiv.2401.17841
+repository-code: >-
+  https://github.com/AlexanderBertrandLab/si-gcca?tab=readme-ov-file
+abstract: >-
+  This repository includes the MATLAB-code for the (SI-)GCCA
+  algorithms (and corrCA variants) as explained in [1] (in
+  the toolbox) as well as all the experiments from the paper
+  in [1], conducted on the publicly available dataset of
+  [2]. The experimental files for the video dataset [3] are
+  not available, due to copyright constraints on the video
+  stimuli (see [3]). However, the analysis code is very
+  similar to the group size experiment on the speech data
+  (which is available), such that it is fairly easy to
+  reproduce the results on the video data once the video
+  features are generated.
+
+
+  [1] S. Geirnaert, Y. Yao, T. Francart and A. Bertrand,
+  "Stimulus-Informed Generalized Canonical Correlation
+  Analysis for Group Analysis of Neural Responses to Natural
+  Stimuli," arXiv, 2024,
+  https://doi.org/10.48550/arXiv.2401.17841.
+
+
+  [2] M. P. Broderick, A. J. Anderson, G. M. Di Liberto, M.
+  J. Crosse, and E. C. Lalor, “Data from:
+  Electrophysiological correlates of semantic dissimilarity
+  reflect the comprehension of natural, narrative speech,”
+  Feb. 2019. [Online]. Available:
+  https://doi.org/10.5061/dryad.070jc
+
+
+  [3] Y. Yao, A. Stebner, T. Tuytelaars, S. Geirnaert, and
+  A. Bertrand, “Video-EEG Encoding-Decoding Dataset KU
+  Leuven,” Zenodo, Jan. 15, 2024. doi:
+  10.5281/zenodo.10512414.
