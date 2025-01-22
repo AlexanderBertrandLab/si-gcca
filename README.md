@@ -38,7 +38,7 @@ Leuven.AI - KU Leuven institute for AI
 
  ## References
  
-[1] S. Geirnaert, Y. Yao, T. Francart and A. Bertrand, "Stimulus-Informed Generalized Canonical Correlation Analysis for Group Analysis of Neural Responses to Natural Stimuli," arXiv, 2024, [https://doi.org/10.48550/arXiv.2401.17841](https://doi.org/10.48550/arXiv.2401.17841).
+[1] S. Geirnaert, Y. Yao, T. Francart and A. Bertrand, "Stimulus-Informed Generalized Canonical Correlation Analysis for Group Analysis of Neural Responses to Natural Stimuli," IEEE Journal of Biomedical and Health Informatics, 2025, [https://doi.org/10.1109/JBHI.2024.3462991](https://ieeexplore.ieee.org/document/10682799).
 
 [2] M. P. Broderick, A. J. Anderson, G. M. Di Liberto, M. J. Crosse, and E. C. Lalor, “Data from: Electrophysiological correlates of semantic dissimilarity reflect the comprehension of natural, narrative speech,” Feb. 2019. [Online]. Available: [https://doi.org/10.5061/dryad.070jc](https://doi.org/10.5061/dryad.070jc)
 
